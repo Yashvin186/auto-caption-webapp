@@ -293,7 +293,7 @@ uploadBtn.addEventListener("click", async () => {
     formData.append("video_url", url);
   }
 
-  const res = await fetch("http://127.0.0.1:8000/upload", {
+  const res = await fetch("/upload", {
     method: "POST",
     body: formData
   });
@@ -309,7 +309,7 @@ let videoLoaded = false;
 
 function startPolling() {
   pollInterval = setInterval(async () => {
-    const res = await fetch(`http://127.0.0.1:8000/status/${jobId}`);
+    const res = await fetch(`/status/${jobId}`);
     const data = await res.json();
 
     const progress = data.progress || 0;
@@ -350,3 +350,4 @@ if (!videoLoaded && data.video_url) {
 
 </body>
 </html>
+
