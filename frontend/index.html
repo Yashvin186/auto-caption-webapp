@@ -224,75 +224,118 @@ video {
 
 </div>
 
-<script> 
-  const uploadMode = document.getElementById("uploadMode");
-  const linkMode = document.getElementById("linkMode");
-  const uploadSection = document.getElementById("uploadSection");
-  const linkSection = document.getElementById("linkSection");
-  const videoFile = document.getElementById("videoFile");
-  const videoUrl = document.getElementById("videoUrl");
-  const fileName = document.getElementById("fileName");
-  const uploadBtn = document.getElementById("uploadBtn");
-  const statusEl = document.getElementById("status"); 
-  const progressWrapper = document.getElementById("progressWrapper");
-  const bar = document.getElementById("bar");
-  const percentEl = document.getElementById("percent");
-  const previewSection = document.getElementById("previewSection");
-  const previewVideo = document.getElementById("previewVideo");
-  const downloadVideo = document.getElementById("downloadVideo");
-  const downloadSrt = document.getElementById("downloadSrt");
-  let jobId = null;
-  let pollInterval = null;
-  uploadMode.onclick = () => { uploadMode.classList.add("active");
-                              linkMode.classList.remove("active");
-                              uploadSection.classList.remove("hidden"); 
-                              linkSection.classList.add("hidden"); }; 
-  linkMode.onclick = () => { linkMode.classList.add("active"); 
-                            uploadMode.classList.remove("active"); 
-                            linkSection.classList.remove("hidden"); 
-                            uploadSection.classList.add("hidden"); }; 
-  videoFile.addEventListener("change", () => { fileName.textContent = videoFile.files[0]?.name || "Choose video file"; }); 
-  uploadBtn.addEventListener("click", async () => { const formData = new FormData(); statusEl.classList.remove("hidden"); 
-                                                   progressWrapper.classList.remove("hidden"); 
-                                                   bar.style.width = "0%"; 
-                                                   percentEl.textContent = "0%";
-                                                   statusEl.innerText = "📤 Uploading video..."; 
-                                                   // Upload mode 
-                                                   if (!uploadSection.classList.contains("hidden")) { 
-                                                     if (!videoFile.files.length) { alert("Select a video file"); 
-                                                                                   return; } 
-                                                     formData.append("file", videoFile.files[0]); } 
-                                                   // Link mode 
-                                                   else { const url = document.getElementById("videoUrl").value.trim(); 
-                                                         if (!url) { alert("Paste a video link"); 
-                                                                    return; } 
-                                                         formData.append("video_url", url); }
-                                                   const res = await fetch("/upload", { method: "POST", body: formData }); 
-                                                   const data = await res.json();
-                                                   jobId = data.job_id; 
-                                                   statusEl.innerText = "🧠 Processing video..."; 
-                                                   startPolling(jobId); }); 
-  let videoLoaded = false;
-  function startPolling() { 
-    pollInterval = setInterval(async () => { const res = await fetch(/status/${jobId}); 
-                                                                    const data = await res.json();
-                                                                    const progress = data.progress || 0; 
-                                                                    bar.style.width = progress + "%"; 
-                                                                    percentEl.textContent = progress + "%"; 
-                                                                    if (data.status === "completed") { clearInterval(pollInterval);
-                                                                                                      statusEl.innerHTML = "✅ Captions generated!"; 
-                                                                                                      previewSection.classList.remove("hidden");
-                                                                                                      // ✅ SET ONLY ONCE 
-                                                                                                      if (!videoLoaded) { previewVideo.src = data.video_url;
-                                                                                                                         downloadVideo.href = data.video_url; 
-                                                                                                                         downloadSrt.href = data.srt_url; videoLoaded = true; } } 
-                                            if (data.status === "failed") { 
-                                              clearInterval(pollInterval); statusEl.innerHTML = "❌ Processing failed"; 
-                                            } }, 1000); 
-  }  </script>
+<script>
+const uploadMode = document.getElementById("uploadMode");
+const linkMode = document.getElementById("linkMode");
+const uploadSection = document.getElementById("uploadSection");
+const linkSection = document.getElementById("linkSection");
+const videoFile = document.getElementById("videoFile");
+const videoUrl = document.getElementById("videoUrl");
+const fileName = document.getElementById("fileName");
+const uploadBtn = document.getElementById("uploadBtn");
+const statusEl = document.getElementById("status");
+const progressWrapper = document.getElementById("progressWrapper");
+const bar = document.getElementById("bar");
+const percentEl = document.getElementById("percent");
+const previewSection = document.getElementById("previewSection");
+const previewVideo = document.getElementById("previewVideo");
+const downloadVideo = document.getElementById("downloadVideo");
+const downloadSrt = document.getElementById("downloadSrt");
+
+let jobId = null;
+let pollInterval = null;
+let videoLoaded = false;
+
+uploadMode.onclick = () => {
+  uploadMode.classList.add("active");
+  linkMode.classList.remove("active");
+  uploadSection.classList.remove("hidden");
+  linkSection.classList.add("hidden");
+};
+
+linkMode.onclick = () => {
+  linkMode.classList.add("active");
+  uploadMode.classList.remove("active");
+  linkSection.classList.remove("hidden");
+  uploadSection.classList.add("hidden");
+};
+
+videoFile.onchange = () => {
+  fileName.textContent = videoFile.files[0]?.name || "Choose video file";
+};
+
+uploadBtn.onclick = async () => {
+  const formData = new FormData();
+  statusEl.classList.remove("hidden");
+  progressWrapper.classList.remove("hidden");
+  bar.style.width = "0%";
+  percentEl.textContent = "0%";
+  videoLoaded = false;
+
+  if (!uploadSection.classList.contains("hidden")) {
+    if (!videoFile.files.length) {
+      alert("Select a video file");
+      return;
+    }
+    formData.append("file", videoFile.files[0]);
+  } else {
+    if (!videoUrl.value.trim()) {
+      alert("Paste a video link");
+      return;
+    }
+    formData.append("video_url", videoUrl.value.trim());
+  }
+
+  statusEl.textContent = "📤 Uploading video...";
+
+  const res = await fetch("/upload", { method: "POST", body: formData });
+  const data = await res.json();
+
+  jobId = data.job_id;
+  statusEl.textContent = "🧠 Processing video...";
+  startPolling();
+};
+
+function startPolling() {
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/status/${jobId}`);
+      if (!res.ok) throw new Error("Server error");
+
+      const data = await res.json();
+      const progress = data.progress || 0;
+
+      bar.style.width = progress + "%";
+      percentEl.textContent = progress + "%";
+
+      if (data.status === "completed") {
+        clearInterval(pollInterval);
+        statusEl.textContent = "✅ Captions generated!";
+        previewSection.classList.remove("hidden");
+
+        if (!videoLoaded) {
+          previewVideo.src = data.video_url;
+          downloadVideo.href = data.video_url;
+          downloadSrt.href = data.srt_url;
+          videoLoaded = true;
+        }
+      }
+
+      if (data.status === "failed") {
+        clearInterval(pollInterval);
+        statusEl.textContent = "❌ Processing failed";
+      }
+    } catch (err) {
+      clearInterval(pollInterval);
+      statusEl.textContent = "⚠️ Server temporarily unavailable";
+    }
+  }, 1500);
+}
+</script>
 
 </body>
 </html>
+
 
 
 
