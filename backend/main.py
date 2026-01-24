@@ -32,7 +32,10 @@ def test():
 @app.get("/")
 def root():
     return {"status": "Server is running"}
-
+    
+@app.get("/healthz")
+def health():
+    return {"status": "ok"}
 
 # 🔹 BACKGROUND PIPELINE
 def process_video(job_id, video_path, background_tasks):
@@ -147,4 +150,5 @@ def cleanup_files(paths, delay=2400):  # 10 minutes
             if p and os.path.exists(p):
                 os.remove(p)
         except:
+
             pass
