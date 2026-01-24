@@ -24,6 +24,10 @@ app.mount("/outputs", StaticFiles(directory=OUTPUTS), name="outputs")
 
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 
 @app.get("/test")
 def test():
@@ -36,6 +40,10 @@ def root():
 @app.get("/healthz")
 def health():
     return {"status": "ok"}
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
 # 🔹 BACKGROUND PIPELINE
 def process_video(job_id, video_path, background_tasks):
@@ -152,3 +160,4 @@ def cleanup_files(paths, delay=2400):  # 10 minutes
         except:
 
             pass
+
