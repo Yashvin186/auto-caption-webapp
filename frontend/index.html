@@ -309,45 +309,50 @@ let videoLoaded = false;
 
 function startPolling() {
   pollInterval = setInterval(async () => {
-    const res = await fetch(`/status/${jobId}`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`/status/${jobId}`);
 
-    const progress = data.progress || 0;
-    bar.style.width = progress + "%";
-    percentEl.textContent = progress + "%";
-
-    if (data.status === "completed") {
-      clearInterval(pollInterval);
-
-      statusEl.innerHTML = "✅ Captions generated!";
-      previewSection.classList.remove("hidden");
-
-      // ✅ SET ONLY ONCE
-      if (!videoLoaded) {
-        previewVideo.src = data.video_url;
-        downloadVideo.href = data.video_url;
-        downloadSrt.href = data.srt_url;
-        videoLoaded = true;
+      if (!res.ok) {
+        throw new Error(`Status ${res.status}`);
       }
-    }
 
-    if (data.status === "failed") {
+      const data = await res.json();
+
+      const progress = data.progress || 0;
+      bar.style.width = progress + "%";
+      percentEl.textContent = progress + "%";
+
+      if (data.status === "completed") {
+        clearInterval(pollInterval);
+
+        statusEl.innerHTML = "✅ Captions generated!";
+        previewSection.classList.remove("hidden");
+
+        if (!videoLoaded) {
+          previewVideo.src = data.video_url;
+          downloadVideo.href = data.video_url;
+          downloadSrt.href = data.srt_url;
+          videoLoaded = true;
+        }
+      }
+
+      if (data.status === "failed") {
+        clearInterval(pollInterval);
+        statusEl.innerHTML = "❌ Processing failed";
+      }
+
+    } catch (err) {
+      console.warn("Polling error:", err.message);
       clearInterval(pollInterval);
-      statusEl.innerHTML = "❌ Processing failed";
+      statusEl.innerHTML = "⚠️ Server temporarily unavailable";
     }
-  }, 1000);
+  }, 1500);
 }
 
-if (!videoLoaded && data.video_url) {
-  previewVideo.src = data.video_url;
-  previewVideo.load();   // 🔒 force single load
-  downloadVideo.href = data.video_url;
-  downloadSrt.href = data.srt_url;
-  videoLoaded = true;
-}
 
 </script>
 
 </body>
 </html>
+
 
