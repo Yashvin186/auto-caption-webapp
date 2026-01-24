@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Video CC Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+* {
+  box-sizing: border-box;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px at top, #0f172a, #020617);
+  color: #e5e7eb;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 900px;
+  margin: auto;
+  padding: 40px 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.header p {
+  color: #94a3b8;
+}
+
+.card {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+.input-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.input-switch button {
+  flex: 1;
+  background: #020617;
+  border: 1px solid #1e293b;
+  color: #e5e7eb;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.input-switch button.active {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: black;
+  font-weight: 600;
+}
+
+.file-input {
+  display: block;
+  border: 1px dashed #334155;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.file-input input {
+  display: none;
+}
+
+#videoUrl {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #f2f2f2;
+  background: #020617;
+  color: #e5e7eb;
+  margin-bottom: 16px;
+  
+}
+
+button#uploadBtn {
+  width: 100%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: black;
+  cursor: pointer;
+}
+
+.status {
+  margin-top: 16px;
+  font-weight: 500;
+}
+
+.progress-wrapper {
+  margin-top: 16px;
+}
+
+.progress-bar {
+  height: 10px;
+  background: #020617;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+}
+
+#bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  transition: width 0.3s ease;
+}
+
+#percent {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.preview {
+  margin-top: 40px;
+}
+
+video {
+  width: 100%;
+  height: 480px;
+  background: black;
+  border-radius: 12px;
+  border: 1px solid #1e293b;
+}
+
+.downloads {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.downloads a {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header class="header">
+  <h1>🎬 Video CC Generator</h1>
+  <p>Upload a video or paste a link to generate captions</p>
+</header>
+
+<div class="card">
+
+  <div class="input-switch">
+    <button id="uploadMode" class="active">📁 Upload Video</button>
+    <button id="linkMode">🔗 Video Link</button>
+  </div>
+
+  <div id="uploadSection">
+    <label class="file-input">
+      <input type="file" id="videoFile" accept="video/*" />
+      <span id="fileName">Choose video file</span>
+    </label>
+  </div>
+
+  <div id="linkSection" class="hidden">
+    <input id="videoUrl" type="text" placeholder="Paste YouTube / Facebook / MP4 link" />
+  </div>
+
+  <button id="uploadBtn">Upload & Generate CC</button>
+
+  <div id="status" class="status hidden"></div>
+
+  <div id="progressWrapper" class="progress-wrapper hidden">
+    <div class="progress-bar">
+      <div id="bar"></div>
+    </div>
+    <span id="percent">0%</span>
+  </div>
+
+</div>
+
+<div id="previewSection" class="preview hidden">
+  <h3>👀 Preview (with CC)</h3>
+  <video id="previewVideo" controls preload="metadata"></video>
+
+  <div class="downloads">
+    <a id="downloadVideo">⬇ Download CC Video</a>
+    <a id="downloadSrt">⬇ Download SRT</a>
+  </div>
+</div>
+
+</div>
+
+<script>
+const uploadMode = document.getElementById("uploadMode");
+const linkMode = document.getElementById("linkMode");
+const uploadSection = document.getElementById("uploadSection");
+const linkSection = document.getElementById("linkSection");
+
+const videoFile = document.getElementById("videoFile");
+const videoUrl = document.getElementById("videoUrl");
+const fileName = document.getElementById("fileName");
+
+const uploadBtn = document.getElementById("uploadBtn");
+const statusEl = document.getElementById("status");
+const progressWrapper = document.getElementById("progressWrapper");
+const bar = document.getElementById("bar");
+const percentEl = document.getElementById("percent");
+
+const previewSection = document.getElementById("previewSection");
+const previewVideo = document.getElementById("previewVideo");
+const downloadVideo = document.getElementById("downloadVideo");
+const downloadSrt = document.getElementById("downloadSrt");
+
+let jobId = null;
+let pollInterval = null;
+
+uploadMode.onclick = () => {
+  uploadMode.classList.add("active");
+  linkMode.classList.remove("active");
+  uploadSection.classList.remove("hidden");
+  linkSection.classList.add("hidden");
+};
+
+linkMode.onclick = () => {
+  linkMode.classList.add("active");
+  uploadMode.classList.remove("active");
+  linkSection.classList.remove("hidden");
+  uploadSection.classList.add("hidden");
+};
+
+videoFile.addEventListener("change", () => {
+  fileName.textContent = videoFile.files[0]?.name || "Choose video file";
+});
+
+uploadBtn.addEventListener("click", async () => {
+  const formData = new FormData();
+
+  statusEl.classList.remove("hidden");
+  progressWrapper.classList.remove("hidden");
+  bar.style.width = "0%";
+  percentEl.textContent = "0%";
+  statusEl.innerText = "📤 Uploading video...";
+
+  // Upload mode
+  if (!uploadSection.classList.contains("hidden")) {
+    if (!videoFile.files.length) {
+        alert("Select a video file");
+        return;
+        }
+    formData.append("file", videoFile.files[0]);
+    }
+  // Link mode
+  else {
+    const url = document.getElementById("videoUrl").value.trim();
+    if (!url) {
+      alert("Paste a video link");
+      return;
+    }
+    formData.append("video_url", url);
+  }
+
+  const res = await fetch("http://127.0.0.1:8000/upload", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  jobId = data.job_id;
+
+  statusEl.innerText = "🧠 Processing video...";
+  startPolling(jobId);
+});
+
+let videoLoaded = false;
+
+function startPolling() {
+  pollInterval = setInterval(async () => {
+    const res = await fetch(`http://127.0.0.1:8000/status/${jobId}`);
+    const data = await res.json();
+
+    const progress = data.progress || 0;
+    bar.style.width = progress + "%";
+    percentEl.textContent = progress + "%";
+
+    if (data.status === "completed") {
+      clearInterval(pollInterval);
+
+      statusEl.innerHTML = "✅ Captions generated!";
+      previewSection.classList.remove("hidden");
+
+      // ✅ SET ONLY ONCE
+      if (!videoLoaded) {
+        previewVideo.src = data.video_url;
+        downloadVideo.href = data.video_url;
+        downloadSrt.href = data.srt_url;
+        videoLoaded = true;
+      }
+    }
+
+    if (data.status === "failed") {
+      clearInterval(pollInterval);
+      statusEl.innerHTML = "❌ Processing failed";
+    }
+  }, 1000);
+}
+
+if (!videoLoaded && data.video_url) {
+  previewVideo.src = data.video_url;
+  previewVideo.load();   // 🔒 force single load
+  downloadVideo.href = data.video_url;
+  downloadSrt.href = data.srt_url;
+  videoLoaded = true;
+}
+
+</script>
+
+</body>
+</html>
